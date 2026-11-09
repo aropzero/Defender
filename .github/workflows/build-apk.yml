@@ -55,16 +55,34 @@ jobs:
             -storepass android -keypass android \
             -dname "CN=Godot, OU=Godot Engine, O=Stichting Godot, C=NL"
 
+      - name: Cache Godot editor + templates
+        uses: actions/cache@v4
+        with:
+          path: |
+            godot.zip
+            godot_templates.tpz
+          key: godot-${{ env.GODOT_VERSION }}-${{ runner.os }}
+
       - name: Install Godot editor + export templates
         run: |
           set -euo pipefail
-          wget -q "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
-          wget -q "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_export_templates.tpz"
-          unzip -q Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip
+          URL="https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable"
+          # Only download when the cache miss; use curl with retries for resilience.
+          if [ ! -f godot.zip ]; then
+            curl -fL --retry 5 --retry-all-errors --retry-delay 3 \
+              --connect-timeout 30 -o godot.zip \
+              "${URL}/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
+          fi
+          if [ ! -f godot_templates.tpz ]; then
+            curl -fL --retry 5 --retry-all-errors --retry-delay 3 \
+              --connect-timeout 30 -o godot_templates.tpz \
+              "${URL}/Godot_v${GODOT_VERSION}-stable_export_templates.tpz"
+          fi
+          unzip -q godot.zip
           mv "Godot_v${GODOT_VERSION}-stable_linux.x86_64" godot
           chmod +x godot
           mkdir -p "${HOME}/.local/share/godot/export_templates/${GODOT_VERSION}.stable"
-          unzip -q Godot_v${GODOT_VERSION}-stable_export_templates.tpz -d "${HOME}/.local/share/godot/export_templates/${GODOT_VERSION}.stable"
+          unzip -q godot_templates.tpz -d "${HOME}/.local/share/godot/export_templates/${GODOT_VERSION}.stable"
           ls "${HOME}/.local/share/godot/export_templates/${GODOT_VERSION}.stable" | head
 
       - name: Configure Godot editor settings (Android SDK / keystore)
