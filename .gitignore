@@ -1,0 +1,12 @@
+# Godot cache / generated metadata
+.godot/
+
+# Build output (APKs are produced by CI)
+build/
+*.apk
+*.idsig
+
+# OS / editor junk
+.DS_Store
+Thumbs.db
+*.tmp
