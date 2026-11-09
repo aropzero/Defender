@@ -49,6 +49,13 @@ var _synergy_txt: Label
 var _msg_lbl: Label
 var _msg_timer = 0.0
 
+# onboarding / guide
+var _hint_lbl: Button
+var _hint_dismissed = false
+var _how_panel: Control
+var _how_body: Label
+var _how_slide = 0
+
 # --------------------------------------------------------------------------
 # AAA gothic theme — dark stone, blood-iron borders, sickly gold, embers.
 # --------------------------------------------------------------------------
@@ -169,18 +176,34 @@ func _to_world(pos: Vector2) -> Vector2:
 	return (pos - _origin) / _scale
 
 func _refresh_hud_layout() -> void:
+	var portrait = _vs.y > _vs.x * 1.1
 	if is_instance_valid(_topbar):
-		_topbar.position = Vector2(12, 10)
-		_topbar.size = Vector2(_vs.x - 24, 62)
+		_topbar.position = Vector2(10, 10)
+		_topbar.size = Vector2(_vs.x - 20, 64 if not portrait else 80)
+	var tb_h = 64.0
+	if is_instance_valid(_topbar):
+		tb_h = _topbar.size.y
 	if is_instance_valid(_msg_lbl):
-		_msg_lbl.position = Vector2(20, 82)
-		_msg_lbl.size = Vector2(_vs.x * 0.6, 20)
+		_msg_lbl.position = Vector2(20, tb_h + 20)
+		_msg_lbl.size = Vector2(_vs.x * 0.62, 22)
 	if is_instance_valid(_skillbar):
-		_skillbar.position = Vector2(_vs.x * 0.22, _vs.y - 86)
-		_skillbar.size = Vector2(_vs.x * 0.56, 76)
+		if portrait:
+			_skillbar.position = Vector2(12, _vs.y - 86)
+			_skillbar.size = Vector2(_vs.x - 24, 76)
+		else:
+			_skillbar.position = Vector2(_vs.x * 0.22, _vs.y - 86)
+			_skillbar.size = Vector2(_vs.x * 0.56, 76)
 	if is_instance_valid(_synergy_panel):
-		_synergy_panel.position = Vector2(_vs.x * 0.70, 90)
-		_synergy_panel.size = Vector2(_vs.x * 0.29, max(120.0, _vs.y - 205))
+		if portrait:
+			_synergy_panel.position = Vector2(_vs.x * 0.5 - 120, tb_h + 48)
+			_synergy_panel.size = Vector2(240, min(340.0, _vs.y * 0.38))
+		else:
+			_synergy_panel.position = Vector2(_vs.x * 0.70, 90)
+			_synergy_panel.size = Vector2(_vs.x * 0.29, max(120.0, _vs.y - 205))
+	if is_instance_valid(_hint_lbl):
+		var hw = min(660.0, _vs.x * 0.92)
+		_hint_lbl.size = Vector2(hw, 44)
+		_hint_lbl.position = Vector2((_vs.x - hw) * 0.5, _vs.y - 132)
 
 func _center_modal(p: Control, w: float, h: float) -> void:
 	p.position = Vector2((_vs.x - w) * 0.5, (_vs.y - h) * 0.5)
@@ -216,47 +239,94 @@ func _build_field_geometry() -> void:
 func _show_main_menu() -> void:
 	_phase = "menu"
 	_clear_ui()
-	var panel = PanelContainer.new()
-	panel.name = "Menu"
-	panel.set_anchors_preset(Control.PRESET_CENTER)
-	panel.position = Vector2(-340, -260)
-	panel.size = Vector2(680, 520)
-	_skin(panel)
-	_ui.add_child(panel)
-	var vb = VBoxContainer.new()
-	vb.add_theme_constant_override("separation", 14)
-	panel.add_child(vb)
+	var vw = _vs.x
+	var vh = _vs.y
+	var portrait = vh > vw * 1.05
+	var px = vw * 0.5
+
+	var root = Control.new()
+	root.name = "MenuRoot"
+	root.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_ui.add_child(root)
+
+	# Ambient glow behind the title (claim the screen, not a card).
+	var glow = ColorRect.new()
+	glow.color = Color(0.85, 0.18, 0.10, 0.05)
+	glow.size = Vector2(min(760.0, vw * 0.85), 300)
+	glow.position = Vector2(px - glow.size.x * 0.5, vh * (0.10 if not portrait else 0.06))
+	root.add_child(glow)
+
+	# Title — big, cinematic, two-line lockup.
 	var title = Label.new()
-	title.text = "CITADEL OF ECHOES"
+	title.text = "CITADEL\nOF ECHOES"
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_title(title, 34)
-	vb.add_child(title)
-	var sub = Label.new()
-	sub.text = "Roguelite tower defense. Every tower and spell carries elemental essence —\ncombine them to invent your defenses."
-	sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	vb.add_child(sub)
-	var e = Label.new()
-	e.text = "Essence Shards: %d    | Best Wave: %d" % [Meta.shards, Meta.best_wave]
-	e.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	vb.add_child(e)
+	title.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	title.size = Vector2(min(860.0, vw * 0.94), 190)
+	title.position = Vector2(px - title.size.x * 0.5, vh * (0.10 if not portrait else 0.06))
+	_title(title, 48)
+	title.add_theme_color_override("font_shadow_color", Color(0.78, 0.12, 0.08, 0.9))
+	root.add_child(title)
 
-	var newb = Button.new()
-	newb.text = "Start a New Run"
-	newb.pressed.connect(_start_run)
-	vb.add_child(newb)
+	# Subtitle tagline.
+	var band = Label.new()
+	band.text = "ROGUELITE TOWER DEFENSE   ·   COMBINE 12 ESSENCES TO INVENT YOUR ARSENAL"
+	band.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	band.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	band.size = Vector2(min(720.0, vw * 0.92), 64)
+	band.position = Vector2(px - band.size.x * 0.5, title.position.y + title.size.y + 6)
+	band.add_theme_font_size_override("font_size", 15)
+	band.add_theme_color_override("font_color", CLR_TXT_DIM)
+	band.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.8))
+	root.add_child(band)
 
-	var metab = Button.new()
-	metab.text = "Meta Progression Store"
-	metab.pressed.connect(_show_meta)
-	vb.add_child(metab)
+	# Meta chip.
+	var chip = Label.new()
+	chip.text = "ESSENCE SHARDS: %d     BEST WAVE: %d" % [Meta.shards, Meta.best_wave]
+	chip.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	chip.size = Vector2(min(560.0, vw * 0.94), 26)
+	chip.position = Vector2(px - chip.size.x * 0.5, band.position.y + band.size.y + 6)
+	chip.add_theme_font_size_override("font_size", 14)
+	chip.add_theme_color_override("font_color", CLR_GOLD)
+	root.add_child(chip)
 
-	var how = Label.new()
-	how.text = "HOW TO PLAY\n• Click a defense slot (right side) to build a tower.\n• Towers auto-fire at enemies marching left→right to the castle.\n• Build towers sharing elements to unlock Resonances (global auras).\n• Place specific towers next to each other for Fusions; collect trifectas for Ascensions.\n• Use skills (keys 1–5). Earn XP, level up, pick relics.\n• Survive as many waves as you can."
-	how.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	how.add_theme_font_size_override("font_size", 13)
-	how.modulate = Color(1, 1, 1, 0.85)
-	vb.add_child(how)
-	_skin(panel)
+	# Primary actions.
+	var bw = min(430.0, vw * 0.82)
+	var bh = 58
+	var sep = 14
+	var by = vh * (0.66 if not portrait else 0.62)
+
+	var btn_start = Button.new()
+	btn_start.text = "START A NEW RUN"
+	btn_start.size = Vector2(bw, bh)
+	btn_start.position = Vector2(px - bw * 0.5, by)
+	btn_start.pressed.connect(_start_run)
+	root.add_child(btn_start)
+
+	var btn_meta = Button.new()
+	btn_meta.text = "META PROGRESSION STORE"
+	btn_meta.size = Vector2(bw, bh)
+	btn_meta.position = Vector2(px - bw * 0.5, by + bh + sep)
+	btn_meta.pressed.connect(_show_meta)
+	root.add_child(btn_meta)
+
+	var btn_how = Button.new()
+	btn_how.text = "HOW TO PLAY"
+	btn_how.size = Vector2(bw, bh)
+	btn_how.position = Vector2(px - bw * 0.5, by + (bh + sep) * 2)
+	btn_how.pressed.connect(func(): _show_howto())
+	root.add_child(btn_how)
+
+	# Footer.
+	var foot = Label.new()
+	foot.text = "CITADEL OF ECHOES  ·  v%s" % ProjectSettings.get_setting("application/config/version", "1.1.0")
+	foot.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	foot.size = Vector2(vw, 22)
+	foot.position = Vector2(0, vh - 40)
+	foot.add_theme_font_size_override("font_size", 12)
+	foot.add_theme_color_override("font_color", Color(0.5, 0.42, 0.34, 0.7))
+	root.add_child(foot)
+
+	_skin(root)
 
 func _show_meta() -> void:
 	_clear_ui()
@@ -295,10 +365,81 @@ func _buy_meta(id: String, cost: int) -> void:
 	else:
 		_message("Not enough shards.")
 
+# ------------------------------------------------------------- how-to-play
+var _HOW_SLIDES = [
+	"STEP 1 — BUILD\n\nTap any glowing circle on the battlefield to open your armory.\nChoose a tower — it unlocks there and fires automatically at any enemy that gets close.",
+	"STEP 2 — SYNERGY\n\nEvery tower carries one of twelve elemental essences.\nBuild towers sharing essences to earn RESONANCES (global auras).\nPlace specific tower types beside each other to trigger FUSIONS.\nCollect trifectas of tower types to ASCEND one into a legendary form.",
+	"STEP 3 — WAVES & SKILLS\n\nPress START WAVE to send the horde. Use your skills from the bar at the bottom of the screen.\nEarn XP to level up, spend attribute points, choose Keystone perks,\nand equip relics on your towers. Survive as many waves as you can.",
+]
+
+func _show_howto() -> void:
+	if _phase in ["combat", "reward", "levelup"]:
+		return
+	_close_popup()
+	_how_slide = 0
+	if is_instance_valid(_how_panel):
+		_how_panel.queue_free()
+	var panel = PanelContainer.new()
+	panel.name = "HowTo"
+	panel.position = Vector2(_vs.x * 0.5 - 340, _vs.y * 0.5 - 240)
+	panel.size = Vector2(680, 480)
+	_skin(panel)
+	_ui.add_child(panel)
+	_how_panel = panel
+	var vb = VBoxContainer.new()
+	vb.add_theme_constant_override("separation", 14)
+	panel.add_child(vb)
+	var t = Label.new()
+	t.text = "HOW TO PLAY"
+	t.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_title(t, 26)
+	vb.add_child(t)
+	var body = Label.new()
+	body.name = "HowBody"
+	body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	body.custom_minimum_size = Vector2(620, 280)
+	vb.add_child(body)
+	_how_body = body
+	_refresh_how_body()
+	var nav = HBoxContainer.new()
+	nav.alignment = BoxContainer.ALIGNMENT_CENTER
+	nav.add_theme_constant_override("separation", 12)
+	vb.add_child(nav)
+	var back = Button.new()
+	back.text = "‹ Back"
+	back.pressed.connect(func():
+		_how_slide = max(0, _how_slide - 1)
+		_refresh_how_body())
+	nav.add_child(back)
+	var next = Button.new()
+	next.text = "Next ›"
+	next.pressed.connect(func():
+		if _how_slide >= _HOW_SLIDES.size() - 1:
+			_close_howto()
+			return
+		_how_slide += 1
+		_refresh_how_body())
+	nav.add_child(next)
+	var done = Button.new()
+	done.text = "Close"
+	done.pressed.connect(_close_howto)
+	nav.add_child(done)
+	_skin(panel)
+
+func _refresh_how_body() -> void:
+	if is_instance_valid(_how_body):
+		_how_body.text = _HOW_SLIDES[_how_slide]
+
+func _close_howto() -> void:
+	if is_instance_valid(_how_panel):
+		_how_panel.queue_free()
+	_how_panel = null
+
 # ------------------------------------------------------------------ run start
 
 func _start_run() -> void:
 	Run.reset()
+	_hint_dismissed = false
 	# apply meta boons
 	if Meta.has_unlock("u_gold"):
 		Run.gold += 100.0
@@ -338,28 +479,43 @@ func _draw_world() -> void:
 	_world.queue_redraw()
 
 func _world_draw() -> void:
-	# field
-	_world.draw_rect(Rect2(20, 40, 1240, 560), Color(0.08, 0.10, 0.14), true)
-	# lanes
+	var w = _world
+	# field base
+	w.draw_rect(Rect2(20, 40, 1240, 560), Color(0.055, 0.07, 0.10), true)
+	# alternate lane ribbons for depth
+	for i in LANES:
+		if i % 2 == 0:
+			continue
+		var y0 = (lane_ys[i - 1] + lane_ys[i]) * 0.5 if i > 0 else 40.0
+		var y1 = (lane_ys[i] + lane_ys[i + 1]) * 0.5 if i < LANES - 1 else 600.0
+		w.draw_rect(Rect2(20, y0, 1240, y1 - y0), Color(0.04, 0.05, 0.075), true)
+	# lane guide lines
 	for i in LANES:
 		var y = lane_ys[i]
-		_world.draw_line(Vector2(20, y), Vector2(CASTLE_X, y), Color(0.14, 0.17, 0.22), 2)
-	# slots
+		w.draw_line(Vector2(20, y), Vector2(CASTLE_X + 50, y), Color(0.12, 0.14, 0.19), 2)
+	# build sockets (empties)
 	for key in slot_pos:
 		var p: Vector2 = slot_pos[key]
-		var gx = int(key.split(",")[0])
-		var occ = Run.tower_at(gx, int(key.split(",")[1]))
-		if occ.is_empty():
-			_world.draw_circle(p, 16, Color(0.16, 0.19, 0.26))
-			_world.draw_arc(p, 16, 0, TAU, 24, Color(0.3, 0.34, 0.4), 2.0)
-	# castle
-	_world.draw_rect(Rect2(CASTLE_X - 10, 40, 60, 560), Color(0.34, 0.38, 0.5))
-	_world.draw_rect(Rect2(CASTLE_X - 10, 40, 12, 560), Color(0.45, 0.5, 0.63))
-	_world.draw_rect(Rect2(CASTLE_X + 40, 48, 8, 60), Color(0.9, 0.7, 0.2))  # beacon
-	# blood-glow aura bleeding from the castle gate
-	for i in range(10):
-		var a = 0.016 * (i + 1)
-		_world.draw_arc(Vector2(CASTLE_X + 34, 320), 26 + i * 12, PI * 0.5, PI * 1.5, 24, Color(0.9, 0.25, 0.18, a), 6.0)
+		if Run.tower_at(int(key.split(",")[0]), int(key.split(",")[1])).is_empty():
+			w.draw_circle(p, 18, Color(0.10, 0.12, 0.17))
+			w.draw_arc(p, 18, 0, TAU, 26, Color(0.32, 0.36, 0.45), 2.5)
+			w.draw_line(p + Vector2(-8, 0), p + Vector2(8, 0), Color(0.4, 0.45, 0.55), 2)
+			w.draw_line(p + Vector2(0, -8), p + Vector2(0, 8), Color(0.4, 0.45, 0.55), 2)
+	# castle keep
+	var cx = CASTLE_X - 10
+	w.draw_rect(Rect2(cx, 40, 72, 560), Color(0.22, 0.24, 0.32), true)
+	for i in range(6):
+		var bxp = cx + 2 + i * 12
+		w.draw_rect(Rect2(bxp, 40, 8, 16), Color(0.28, 0.30, 0.40), true)
+	# gate
+	w.draw_rect(Rect2(cx + 18, 330, 36, 270), Color(0.03, 0.03, 0.05), true)
+	w.draw_arc(Vector2(cx + 36, 330), 18, PI, TAU, 24, Color(0.03, 0.03, 0.05), 20)
+	# gate blood-glow
+	for i in range(12):
+		var a = 0.013 * (i + 1)
+		w.draw_arc(Vector2(cx + 60, 360), 26 + i * 13, PI * 0.5, PI * 1.5, 28, Color(0.9, 0.25, 0.18, a), 8.0)
+	# beacon
+	w.draw_circle(Vector2(cx + 82, 120), 6, Color(0.95, 0.75, 0.25))
 	# ragged ruin silhouettes along the rear horizon
 	var shapes = [26, 40, 18, 34, 24]
 	for i in shapes.size():
@@ -367,16 +523,16 @@ func _world_draw() -> void:
 		var rh = shapes[i]
 		var pts = PackedVector2Array([
 			Vector2(rx, 40), Vector2(rx + 14, 40), Vector2(rx + 8, 40 - rh)])
-		_world.draw_colored_polygon(pts, Color(0.05, 0.055, 0.09))
+		w.draw_colored_polygon(pts, Color(0.045, 0.05, 0.085))
 	# fx
 	for f in fx:
 		match f.kind:
 			"shot":
-				_world.draw_line(f.from, f.to, f.color, f.w)
+				w.draw_line(f.from, f.to, f.color, f.w)
 			"ring":
-				_world.draw_arc(f.pos, f.r, 0, TAU, 32, f.color, 3.0)
+				w.draw_arc(f.pos, f.r, 0, TAU, 32, f.color, 3.0)
 			"impact":
-				_world.draw_circle(f.pos, f.r, Color(1, 1, 1, f.a))
+				w.draw_circle(f.pos, f.r, Color(1, 1, 1, f.a))
 
 func _world_process(dt: float) -> void:
 	# decay fx
@@ -447,6 +603,22 @@ func _build_ui() -> void:
 	_msg_lbl.add_theme_font_size_override("font_size", 15)
 	_msg_lbl.modulate = Color(1, 0.85, 0.5)
 	_ui.add_child(_msg_lbl)
+	# guide hint (tap to dismiss)
+	_hint_lbl = Button.new()
+	_hint_lbl.name = "Hint"
+	_hint_lbl.add_theme_font_size_override("font_size", 16)
+	_hint_lbl.add_theme_color_override("font_color", Color("#f0cd8a"))
+	_hint_lbl.add_theme_color_override("font_hover_color", Color("#ffe6ad"))
+	_hint_lbl.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.9))
+	_hint_lbl.add_theme_constant_override("shadow_offset_x", 1)
+	_hint_lbl.add_theme_constant_override("shadow_offset_y", 1)
+	var flat := _sb(Color(0, 0, 0, 0.0), Color(1, 1, 1, 0.0), 0)
+	_hint_lbl.add_theme_stylebox_override("normal", flat)
+	_hint_lbl.add_theme_stylebox_override("hover", flat)
+	_hint_lbl.add_theme_stylebox_override("pressed", flat)
+	_hint_lbl.add_theme_stylebox_override("focus", flat)
+	_hint_lbl.pressed.connect(func(): _hint_dismissed = true; _update_hint())
+	_ui.add_child(_hint_lbl)
 	_skin(_topbar)
 	_skin(_synergy_panel)
 	_skin(_skillbar)
@@ -476,6 +648,7 @@ func _build_skillbar() -> void:
 func _update_ui() -> void:
 	if _phase in ["menu", "meta", "gameover"]:
 		return
+	_update_hint()
 	if is_instance_valid(_hp_bar):
 		var frac = clamp(Run.castle.hp / max(Run.castle.max_hp, 0.1), 0.0, 1.0)
 		_hp_bar.color = Color(1, 0.25, 0.25).lerp(Color(0.2, 1, 0.4), frac)
@@ -486,6 +659,22 @@ func _update_ui() -> void:
 		_lvl_txt.text = "Lv %d" % Run.player.level
 	if is_instance_valid(_synergy_txt):
 		_synergy_txt.text = _synergy_summary()
+
+func _update_hint() -> void:
+	if not is_instance_valid(_hint_lbl):
+		return
+	if _hint_dismissed:
+		_hint_lbl.text = ""
+		return
+	var txt = ""
+	if _phase == "build":
+		if Run.towers.size() == 0:
+			txt = "①  TAP A CIRCLE on the field to build your first tower   ✕"
+		else:
+			txt = "②  PRESS “START WAVE” when your defenses are ready   ✕"
+	elif _phase == "combat" and Run.skills_equipped.size() > 0:
+		txt = "③  TAP A SKILL (bottom bar) to cast it in the fight   ✕"
+	_hint_lbl.text = txt
 
 func _synergy_summary() -> String:
 	var lines = ["ACTIVE SYNERGIES"]
@@ -1554,6 +1743,9 @@ func _clear_ui() -> void:
 	_card_panel = null
 	_attr_panel = null
 	_msg_lbl = null
+	_hint_lbl = null
+	_how_panel = null
+	_how_body = null
 	_hp_bar = null
 	_hp_txt = null
 	_gold_txt = null

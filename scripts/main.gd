@@ -11,6 +11,21 @@ func _ready() -> void:
 	add_child(game)
 	if OS.get_environment("CITADEL_SELFTEST") == "1":
 		_run_selftest()
+	if OS.get_environment("CITADEL_MENUTEST") == "1":
+		_run_menutest()
+
+func _run_menutest() -> void:
+	await get_tree().process_frame
+	await get_tree().process_frame
+	game._show_howto()
+	await get_tree().create_timer(0.2).timeout
+	game._close_howto()
+	game._show_meta()
+	await get_tree().create_timer(0.2).timeout
+	game._show_main_menu()
+	await get_tree().create_timer(0.2).timeout
+	print("[MENUTEST OK]")
+	get_tree().quit()
 
 func _resolve_phase() -> void:
 	# drive any open modal UI deterministically

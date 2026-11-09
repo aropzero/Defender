@@ -126,3 +126,10 @@ synergy engine and combat loop pick it up automatically — no wiring required.
 - **Full-screen responsive layout** — the battle field keeps its design aspect and is centered, while the rest of the screen is filled with atmospheric gothic art, so it fills any phone orientation with no black bars.
 - **AAA gothic theme** — blood-iron panels, sickly gold titles, ember drift and a corner vignette.
 - **Touch input** — tap to build towers, open panels and cast skills (works alongside mouse/keys).
+
+## v1.2.0 — UI overhaul & onboarding
+- **New cinematic title screen** (full-screen, portrait/landscape aware).
+- **How to Play** moved to a guided 3-step modal (button on the main menu).
+- **In-game step-by-step hints** ("tap a circle to build" → "press Start Wave" → skill casting).
+- **Stronger battlefield art**: castle keep with battlements and gate glow, lane ribbons, socket-style build slots.
+- **Portrait-friendly HUD** layout for phones held upright.
