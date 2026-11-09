@@ -49,6 +49,8 @@ func _draw() -> void:
 			_draw_gate(col, s)
 		_:
 			_draw_turret(col, s)
+	# faint arcane aura ring
+	draw_arc(Vector2.ZERO, 21 * s, 0, TAU, 32, Color(col.r, col.g, col.b, 0.4), 2.0)
 	var n = 16
 	var i = 0
 	while i < level:

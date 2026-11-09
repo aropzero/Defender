@@ -49,6 +49,143 @@ var _synergy_txt: Label
 var _msg_lbl: Label
 var _msg_timer = 0.0
 
+# --------------------------------------------------------------------------
+# AAA gothic theme — dark stone, blood-iron borders, sickly gold, embers.
+# --------------------------------------------------------------------------
+const CLR_BG = Color("#06060b")
+const CLR_PANEL = Color(0.045, 0.05, 0.08, 0.94)
+const CLR_PANEL_HI = Color(0.08, 0.09, 0.13, 0.96)
+const CLR_PANEL_DN = Color(0.03, 0.033, 0.055, 0.95)
+const CLR_BORDER = Color("#6d0f1d")
+const CLR_BORDER_HI = Color("#b01e2e")
+const CLR_GOLD = Color("#d9a441")
+const CLR_TXT = Color("#d6ccbd")
+const CLR_TXT_DIM = Color(0.55, 0.53, 0.48, 0.8)
+
+var _vs = Vector2(1280, 720)
+var _scale = 1.0
+var _origin = Vector2.ZERO
+var _field = Rect2(0, 0, 1280, 720)
+var _bg: Control
+
+func _sb(fill: Color, border: Color, w: int, r: int = 6) -> StyleBoxFlat:
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = fill
+	sb.border_color = border
+	sb.set_border_width_all(w)
+	sb.set_corner_radius_all(r)
+	sb.shadow_color = Color(0, 0, 0, 0.55)
+	sb.shadow_size = 6
+	sb.shadow_offset = Vector2(0, 3)
+	return sb
+
+func _skin(n: Node) -> void:
+	if n is Button:
+		var b: Button = n
+		b.add_theme_stylebox_override("normal", _sb(CLR_PANEL, CLR_BORDER, 1, 4))
+		b.add_theme_stylebox_override("hover", _sb(CLR_PANEL_HI, CLR_BORDER_HI, 2, 4))
+		b.add_theme_stylebox_override("pressed", _sb(CLR_PANEL_DN, CLR_GOLD, 2, 4))
+		b.add_theme_stylebox_override("disabled", _sb(Color(0.05, 0.055, 0.08, 0.6), Color(0.25, 0.22, 0.18, 0.6), 1, 4))
+		b.add_theme_color_override("font_color", CLR_TXT)
+		b.add_theme_color_override("font_hover_color", Color("#f0e6d0"))
+		b.add_theme_color_override("font_pressed_color", CLR_GOLD)
+		b.add_theme_color_override("font_disabled_color", Color(0.45, 0.42, 0.38, 0.6))
+	elif n is PanelContainer:
+		n.add_theme_stylebox_override("panel", _sb(CLR_PANEL, CLR_BORDER, 2, 10))
+	elif n is Label:
+		if not n.has_theme_color_override("font_color"):
+			n.add_theme_color_override("font_color", CLR_TXT)
+	for c in n.get_children():
+		_skin(c)
+
+func _title(l: Label, size: int) -> void:
+	l.add_theme_font_size_override("font_size", size)
+	l.add_theme_color_override("font_color", CLR_GOLD)
+	l.add_theme_color_override("font_shadow_color", Color(0.9, 0.15, 0.1, 0.6))
+	l.add_theme_constant_override("shadow_offset_x", 2)
+	l.add_theme_constant_override("shadow_offset_y", 2)
+
+# --------------------------------------------------------------------------
+# Responsive full-screen layout: the battle field is kept at its 1280x720
+# design aspect and centered; the rest of the screen is filled with gothic
+# atmosphere so there are never black bars, in any orientation.
+# --------------------------------------------------------------------------
+func _build_atmosphere() -> void:
+	_bg = Control.new()
+	_bg.name = "_bg"
+	_bg.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_ui.add_child(_bg)
+	var base := ColorRect.new()
+	base.color = CLR_BG
+	base.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_bg.add_child(base)
+	var vig := TextureRect.new()
+	var vigtex := GradientTexture2D.new()
+	vigtex.gradient = Gradient.new()
+	vigtex.gradient.set_color(0, Color(0, 0, 0, 0))
+	vigtex.gradient.set_color(1, Color(0, 0, 0, 0.93))
+	vigtex.fill_from = Vector2(0.5, 0.5)
+	vigtex.fill_to = Vector2(1.06, 1.06)
+	vigtex.fill = GradientTexture2D.FILL_RADIAL
+	vig.texture = vigtex
+	vig.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_bg.add_child(vig)
+	var emb := CPUParticles2D.new()
+	emb.amount = 80
+	emb.lifetime = 6.0
+	emb.emission_shape = CPUParticles2D.EMISSION_SHAPE_RECTANGLE
+	emb.emission_rect_extents = Vector2(760, 420)
+	emb.position = Vector2(640, 320)
+	emb.direction = Vector2(0, -1)
+	emb.spread = 30
+	emb.gravity = Vector2(0, -10)
+	emb.initial_velocity_min = 6
+	emb.initial_velocity_max = 40
+	emb.scale_amount_min = 0.8
+	emb.scale_amount_max = 2.6
+	emb.color = Color(1.0, 0.55, 0.25, 0.5)
+	var ramp := Gradient.new()
+	ramp.set_color(0, Color(1.0, 0.7, 0.35, 0.85))
+	ramp.set_color(1, Color(0.5, 0.05, 0.02, 0.0))
+	emb.color_ramp = ramp
+	_bg.add_child(emb)
+
+func _relayout() -> void:
+	var vs := get_viewport().get_visible_rect().size
+	if vs.x <= 0.0 or vs.y <= 0.0:
+		vs = Vector2(1280, 720)
+	_vs = vs
+	_scale = min(vs.x / 1280.0, vs.y / 720.0)
+	var fw: float = 1280.0 * _scale
+	var fh: float = 720.0 * _scale
+	_origin = Vector2((vs.x - fw) * 0.5, (vs.y - fh) * 0.5)
+	_field = Rect2(_origin, Vector2(fw, fh))
+	if is_instance_valid(_world):
+		_world.position = _origin
+		_world.scale = Vector2(_scale, _scale)
+	_refresh_hud_layout()
+
+func _to_world(pos: Vector2) -> Vector2:
+	return (pos - _origin) / _scale
+
+func _refresh_hud_layout() -> void:
+	if is_instance_valid(_topbar):
+		_topbar.position = Vector2(12, 10)
+		_topbar.size = Vector2(_vs.x - 24, 62)
+	if is_instance_valid(_msg_lbl):
+		_msg_lbl.position = Vector2(20, 82)
+		_msg_lbl.size = Vector2(_vs.x * 0.6, 20)
+	if is_instance_valid(_skillbar):
+		_skillbar.position = Vector2(_vs.x * 0.22, _vs.y - 86)
+		_skillbar.size = Vector2(_vs.x * 0.56, 76)
+	if is_instance_valid(_synergy_panel):
+		_synergy_panel.position = Vector2(_vs.x * 0.70, 90)
+		_synergy_panel.size = Vector2(_vs.x * 0.29, max(120.0, _vs.y - 205))
+
+func _center_modal(p: Control, w: float, h: float) -> void:
+	p.position = Vector2((_vs.x - w) * 0.5, (_vs.y - h) * 0.5)
+	p.size = Vector2(w, h)
+
 func _ready() -> void:
 	_world = Node2D.new()
 	_world.name = "World"
@@ -58,8 +195,11 @@ func _ready() -> void:
 	_ui.name = "UI"
 	_ui.set_anchors_preset(Control.PRESET_FULL_RECT)
 	add_child(_ui)
+	_build_atmosphere()
 	_build_field_geometry()
+	_relayout()
 	_show_main_menu()
+	get_tree().root.size_changed.connect(_relayout)
 
 # ---------------------------------------------------------------- geometry
 
@@ -81,14 +221,15 @@ func _show_main_menu() -> void:
 	panel.set_anchors_preset(Control.PRESET_CENTER)
 	panel.position = Vector2(-340, -260)
 	panel.size = Vector2(680, 520)
+	_skin(panel)
 	_ui.add_child(panel)
 	var vb = VBoxContainer.new()
 	vb.add_theme_constant_override("separation", 14)
 	panel.add_child(vb)
 	var title = Label.new()
 	title.text = "CITADEL OF ECHOES"
-	title.add_theme_font_size_override("font_size", 34)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_title(title, 34)
 	vb.add_child(title)
 	var sub = Label.new()
 	sub.text = "Roguelite tower defense. Every tower and spell carries elemental essence —\ncombine them to invent your defenses."
@@ -115,6 +256,7 @@ func _show_main_menu() -> void:
 	how.add_theme_font_size_override("font_size", 13)
 	how.modulate = Color(1, 1, 1, 0.85)
 	vb.add_child(how)
+	_skin(panel)
 
 func _show_meta() -> void:
 	_clear_ui()
@@ -122,13 +264,15 @@ func _show_meta() -> void:
 	panel.set_anchors_preset(Control.PRESET_CENTER)
 	panel.position = Vector2(-340, -240)
 	panel.size = Vector2(680, 480)
+	_skin(panel)
 	_ui.add_child(panel)
 	var vb = VBoxContainer.new()
 	vb.add_theme_constant_override("separation", 8)
 	panel.add_child(vb)
 	var t = Label.new()
 	t.text = "META PROGRESSION  —  Shards: %d" % Meta.shards
-	t.add_theme_font_size_override("font_size", 24)
+	t.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_title(t, 24)
 	vb.add_child(t)
 	for u in Meta.UNLOCKS:
 		var btn = Button.new()
@@ -143,6 +287,7 @@ func _show_meta() -> void:
 	back.text = "Back"
 	back.pressed.connect(_show_main_menu)
 	vb.add_child(back)
+	_skin(panel)
 
 func _buy_meta(id: String, cost: int) -> void:
 	if Meta.unlock(id, cost):
@@ -211,6 +356,18 @@ func _world_draw() -> void:
 	_world.draw_rect(Rect2(CASTLE_X - 10, 40, 60, 560), Color(0.34, 0.38, 0.5))
 	_world.draw_rect(Rect2(CASTLE_X - 10, 40, 12, 560), Color(0.45, 0.5, 0.63))
 	_world.draw_rect(Rect2(CASTLE_X + 40, 48, 8, 60), Color(0.9, 0.7, 0.2))  # beacon
+	# blood-glow aura bleeding from the castle gate
+	for i in range(10):
+		var a = 0.016 * (i + 1)
+		_world.draw_arc(Vector2(CASTLE_X + 34, 320), 26 + i * 12, PI * 0.5, PI * 1.5, 24, Color(0.9, 0.25, 0.18, a), 6.0)
+	# ragged ruin silhouettes along the rear horizon
+	var shapes = [26, 40, 18, 34, 24]
+	for i in shapes.size():
+		var rx = 60 + i * 240
+		var rh = shapes[i]
+		var pts = PackedVector2Array([
+			Vector2(rx, 40), Vector2(rx + 14, 40), Vector2(rx + 8, 40 - rh)])
+		_world.draw_colored_polygon(pts, Color(0.05, 0.055, 0.09))
 	# fx
 	for f in fx:
 		match f.kind:
@@ -290,6 +447,10 @@ func _build_ui() -> void:
 	_msg_lbl.add_theme_font_size_override("font_size", 15)
 	_msg_lbl.modulate = Color(1, 0.85, 0.5)
 	_ui.add_child(_msg_lbl)
+	_skin(_topbar)
+	_skin(_synergy_panel)
+	_skin(_skillbar)
+	_refresh_hud_layout()
 	_update_ui()
 
 func _build_skillbar() -> void:
@@ -310,6 +471,7 @@ func _build_skillbar() -> void:
 			btn.disabled = true
 		btn.name = "Skill_%d" % i
 		_skillbar.add_child(btn)
+	_skin(_skillbar)
 
 func _update_ui() -> void:
 	if _phase in ["menu", "meta", "gameover"]:
@@ -362,22 +524,25 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 		_handle_click(event.position)
+	elif event is InputEventScreenTouch and event.pressed:
+		_handle_click(event.position)
 
 func _handle_click(pos: Vector2) -> void:
 	# close popups if clicking elsewhere
 	if _popup != null and is_instance_valid(_popup) and not _popup.get_global_rect().has_point(pos):
 		_close_popup()
 		return
+	var wp := _to_world(pos)
 	# hit test towers
 	for ser in tower_nodes.keys():
 		var node: Node2D = tower_nodes[ser].node
-		if node.position.distance_to(pos) < 26:
+		if node.position.distance_to(wp) < 26:
 			_open_tower_panel(ser)
 			return
 	# hit test slots
 	for key in slot_pos:
 		var p: Vector2 = slot_pos[key]
-		if p.distance_to(pos) < 22:
+		if p.distance_to(wp) < 22:
 			if Run.tower_at(int(key.split(",")[0]), int(key.split(",")[1])).is_empty():
 				_open_build_menu(int(key.split(",")[0]), int(key.split(",")[1]))
 			return
@@ -416,6 +581,7 @@ func _open_build_menu(gx: int, gy: int) -> void:
 	sell_close.pressed.connect(_close_popup)
 	vb.add_child(sell_close)
 	_popup = panel
+	_skin(panel)
 	_ui.add_child(panel)
 
 func _place_tower(id: String, gx: int, gy: int) -> void:
@@ -496,6 +662,7 @@ func _open_tower_panel(ser: int) -> void:
 	cl.pressed.connect(_close_popup)
 	vb.add_child(cl)
 	_popup = panel
+	_skin(panel)
 	_ui.add_child(panel)
 
 func _valid_relic_pending(ser: int) -> bool:
@@ -566,6 +733,7 @@ func _offer_relic(ser: int) -> void:
 	cl.pressed.connect(_close_popup)
 	vb.add_child(cl)
 	_popup = panel
+	_skin(panel)
 	_ui.add_child(panel)
 
 func _apply_relic(ser: int, rid: String) -> void:
@@ -749,8 +917,8 @@ func _show_levelup() -> void:
 	_clear_popups()
 	var panel = PanelContainer.new()
 	panel.name = "LevelUp"
-	panel.position = Vector2(340, 220)
-	panel.size = Vector2(600, 280)
+	_center_modal(panel, 620, 300)
+	_skin(panel)
 	_ui.add_child(panel)
 	_attr_panel = panel
 	var vb = VBoxContainer.new()
@@ -758,7 +926,8 @@ func _show_levelup() -> void:
 	panel.add_child(vb)
 	var t = Label.new()
 	t.text = "LEVEL UP! You are now level %d.\nSpend an attribute point:" % Run.player.level
-	t.add_theme_font_size_override("font_size", 18)
+	t.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_title(t, 18)
 	vb.add_child(t)
 	for id in DB.ATTR.keys():
 		var info: Dictionary = DB.attr_info(id)
@@ -770,6 +939,7 @@ func _show_levelup() -> void:
 	done.text = "Done"
 	done.pressed.connect(_close_levelup)
 	vb.add_child(done)
+	_skin(panel)
 
 func _spend_attr(id: String) -> void:
 	Run.player.attr[id] += 1
@@ -804,14 +974,15 @@ func _maybe_keystone() -> void:
 	opts.shuffle()
 	opts = opts.slice(0, 3)
 	var panel = PanelContainer.new()
-	panel.position = Vector2(300, 200)
-	panel.size = Vector2(680, 320)
+	_center_modal(panel, 700, 340)
+	_skin(panel)
 	_ui.add_child(panel)
 	var vb = VBoxContainer.new()
 	panel.add_child(vb)
 	var t = Label.new()
 	t.text = "Choose a Keystone perk:"
-	t.add_theme_font_size_override("font_size", 18)
+	t.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_title(t, 18)
 	vb.add_child(t)
 	for k in opts:
 		var btn = Button.new()
@@ -822,6 +993,7 @@ func _maybe_keystone() -> void:
 	skip.text = "Skip"
 	skip.pressed.connect(func(): panel.queue_free(); _phase = _wave_running() if _wave_running() else "build")
 	vb.add_child(skip)
+	_skin(panel)
 
 func _pick_keystone(id: String, panel: Control) -> void:
 	if not (id in Run.player.keystones):
@@ -838,15 +1010,16 @@ func _offer_reward_cards() -> void:
 	var cards = _generate_reward_cards()
 	var panel = PanelContainer.new()
 	panel.name = "Rewards"
-	panel.position = Vector2(140, 170)
-	panel.size = Vector2(1000, 360)
+	_center_modal(panel, 1040, 380)
+	_skin(panel)
 	_ui.add_child(panel)
 	var hb = HBoxContainer.new()
 	hb.add_theme_constant_override("separation", 20)
 	panel.add_child(hb)
 	var t = Label.new()
 	t.text = "Wave cleared! Choose a reward:"
-	t.add_theme_font_size_override("font_size", 18)
+	t.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_title(t, 18)
 	hb.add_child(t)
 	# separate header
 	for c in cards:
@@ -855,6 +1028,7 @@ func _offer_reward_cards() -> void:
 		b.text = "%s\n\n%s" % [c.name, c.desc]
 		b.pressed.connect(_apply_reward.bind(c, panel))
 		hb.add_child(b)
+	_skin(panel)
 
 func _generate_reward_cards() -> Array:
 	var cards = []
@@ -1341,13 +1515,14 @@ func _end_run(victory: bool = false) -> void:
 	panel.set_anchors_preset(Control.PRESET_CENTER)
 	panel.position = Vector2(-340, -200)
 	panel.size = Vector2(680, 400)
+	_skin(panel)
 	_ui.add_child(panel)
 	var vb = VBoxContainer.new()
 	vb.add_theme_constant_override("separation", 10)
 	panel.add_child(vb)
 	var t = Label.new()
-	t.add_theme_font_size_override("font_size", 30)
 	t.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_title(t, 30)
 	if victory or Run.castle.hp > 0.0 and Run.wave > 60:
 		t.text = "VICTORY"
 	else:
@@ -1364,9 +1539,12 @@ func _end_run(victory: bool = false) -> void:
 	mb.text = "Return to Main Menu"
 	mb.pressed.connect(_show_main_menu)
 	vb.add_child(mb)
+	_skin(panel)
 
 func _clear_ui() -> void:
 	for c in _ui.get_children():
+		if c.name == "_bg":
+			continue
 		c.queue_free()
 	_topbar = null
 	_skillbar = null

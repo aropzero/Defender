@@ -120,3 +120,9 @@ settings — CI generates its own keystore; locally, either configure your own i
 Everything content lives in `scripts/db/content_db.gd`. Add a tower, skill,
 resonance, fusion, ascension, relic or keystone as one dictionary entry and the
 synergy engine and combat loop pick it up automatically — no wiring required.
+
+## Presentation
+
+- **Full-screen responsive layout** — the battle field keeps its design aspect and is centered, while the rest of the screen is filled with atmospheric gothic art, so it fills any phone orientation with no black bars.
+- **AAA gothic theme** — blood-iron panels, sickly gold titles, ember drift and a corner vignette.
+- **Touch input** — tap to build towers, open panels and cast skills (works alongside mouse/keys).

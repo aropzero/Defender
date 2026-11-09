@@ -124,6 +124,7 @@ func _draw() -> void:
 	var r = radius
 	draw_circle(Vector2.ZERO, r, c)
 	draw_circle(Vector2.ZERO, r - 4.0, c.darkened(0.45))
+	draw_arc(Vector2.ZERO, r + (5.0 if boss else 3.0), 0, TAU, 24, Color(c.r, c.g, c.b, 0.35), 2.0)
 	var ec = Color("#1a1d24")
 	draw_circle(Vector2(-r * 0.3, -r * 0.2), r * 0.16, ec)
 	draw_circle(Vector2(r * 0.3, -r * 0.2), r * 0.16, ec)
