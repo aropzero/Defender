@@ -13,6 +13,14 @@ var value = 5.0
 var boss = false
 var radius = 12.0
 
+# elite affixes (from DB.AFFIXES)
+var affixes = []
+var elite = false
+var adaptive = false
+var regen_rate = 0.0
+var splitter = false
+var mini = false
+
 # debuffs: key -> {pot: float, t: float, stacks: int}
 var st = {}
 
@@ -32,7 +40,15 @@ func setup(data: Dictionary, l: int) -> void:
 	value = data.get("gold", 5.0)
 	xp = data.get("xp", 6.0)
 	boss = data.get("boss", false)
+	mini = data.get("mini", false)
 	radius = 20.0 if boss else 11.0
+	affixes = data.get("affixes", [])
+	elite = (not boss) and affixes.size() > 0
+	adaptive = data.get("aff_adaptive", false)
+	regen_rate = data.get("aff_regen", 0.0)
+	splitter = data.get("aff_splitter", false) and not mini
+	if data.has("aff_radius") and data["aff_radius"] > 0.0:
+		radius = data["aff_radius"]
 	position = Vector2(30, 0)
 
 func is_boss() -> bool:
@@ -70,6 +86,8 @@ func effective_armor() -> float:
 
 func take_hit(dmg: float) -> float:
 	var actual = max(0.0, dmg)
+	if adaptive:
+		actual *= 0.7  # adaptive elites shrug off a third of each hit
 	hp -= actual
 	flash = 0.12
 	if hp <= 0.0 and not dead:
@@ -96,6 +114,9 @@ func tick(dt: float, dot_mult: float, tick_boost: float, freeze_all: bool) -> vo
 				if hp <= 0.0:
 					dead = true
 					break
+	# regen (regenerating affix)
+	if not dead and regen_rate > 0.0:
+		hp = min(max_hp, hp + max_hp * regen_rate * dt)
 	# movement
 	if not dead:
 		var mov = speed * slow_factor() * dt
@@ -130,6 +151,12 @@ func _draw() -> void:
 	draw_circle(Vector2(r * 0.3, -r * 0.2), r * 0.16, ec)
 	if boss:
 		draw_arc(Vector2.ZERO, r + 6.0, 0, TAU, 24, Color("#ffb84a"), 2.0)
+	if elite:
+		draw_arc(Vector2.ZERO, r + 8.0, 0, TAU, 28, Color(1.0, 0.84, 0.4), 2.5)
+		for i in affixes.size():
+			var a = TAU * float(i) / float(max(affixes.size(), 1))
+			var dot = Vector2(cos(a), sin(a)) * (r + 11.0)
+			draw_circle(dot, 2.4, Color("#ffe08a"))
 	var w = r * 2.2
 	var frac = clamp(hp / max_hp, 0.0, 1.0)
 	draw_rect(Rect2(-w / 2, -r - 9, w, 3), Color(0, 0, 0, 0.6))

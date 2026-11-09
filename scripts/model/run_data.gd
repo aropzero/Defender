@@ -12,6 +12,13 @@ var wave = 1
 var kills = 0
 var waves_cleared = 0
 
+# campaign layer: wave omens, permanent pacts, kill-streak combo
+var omen_id = ""
+var omen_give = {}   # wave omen bonus dict (key -> value), injected on refresh
+var give_bonus = {}  # permanent pact bonuses (key -> value), injected on refresh
+var pacts = []       # pact ids already taken this run
+var combo = 0        # kill streak without a castle breach
+
 # Tower instances. Each: {id, level, relics: [], gx:int, gy:int}
 var towers = []
 var tower_index = {}   # key "gx,gy" -> index in towers (or -1)
@@ -36,6 +43,11 @@ func reset() -> void:
 	wave = 1
 	kills = 0
 	waves_cleared = 0
+	omen_id = ""
+	omen_give = {}
+	give_bonus = {}
+	pacts = []
+	combo = 0
 	towers = []
 	tower_index = {}
 	next_tower_serial = 1

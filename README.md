@@ -62,6 +62,24 @@ See **[docs/DESIGN.md](docs/DESIGN.md)** for the full system. In short:
 - **Skill × tower** affinity scaling, per-tower **relics**, and a **Keystone**
   perk tree on top of the attribute point system — so builds are combinatorial.
 
+## The campaign layer (the roguelite loop)
+
+On top of the synergy stack, a run-layer adds the *risk/adapt* texture of a
+roguelite:
+
+- **Wave Omens** — every wave rolls a battlefield condition (Starfall, Blood
+  Moon, Void Eclipse, Rimeveil…). It buffs one strategy for that wave, so you
+  steer your next build toward (or away from) what the field favours.
+- **Elite & Affixed enemies** — waves seed elites carrying affixes: *Swift*,
+  *Warded*, *Colossal*, *Regenerating*, *Adaptive* (shrugs off a third of each
+  hit) and *Splitter* (splits into two minions on death). Bosses always bear a
+  pair of affixes.
+- **Kill-streak combo** — consecutive kills without a castle breach build a
+  combo that multiplies gold/XP and — momentum damage. A breach resets it.
+- **Pacts (cursed rewards)** — reward streams sometimes offer a one-way pact
+  (e.g. *Ravager's Pact*: +35% damage forever, but −40 castle max HP). Take
+  strength at a price.
+
 ## Project layout
 
 ```
@@ -87,7 +105,7 @@ casts skills, clears waves, picks rewards, levels up):
 
 ```bash
 CITADEL_SELFTEST=1 godot --headless --path .
-# -> [SELFTEST OK] waves_ran=6 hp=... kills=... gold=... syn_active=... asc=...
+# -> [SELFTEST OK] waves_ran=6 hp=... kills=... gold=... syn_active=... asc=... omen=... elite=... combo_peak=... pacts=...
 ```
 
 This is how the project is validated here, and it doubles as a regression harness.
@@ -127,6 +145,13 @@ synergy engine and combat loop pick it up automatically — no wiring required.
 - **Earth battlefield at golden hour** — a bright, daylit scene: warm sky, grass field, dirt lanes, a sandstone keep with red banners and a torch-lit gate. No black voids — readable on any phone screen.
 - **Parchment UI** — light, high-contrast panels and buttons with dark ink text, so every menu and stat is legible in bright and dim light.
 - **Touch input** — tap to build towers, open panels and cast skills (works alongside mouse/keys).
+
+## v1.4.0 — the Campaign layer (omen / elites / combo / pacts)
+- **Wave Omens**: battlefield conditions roll each wave (Starfall, Blood Moon, Void Eclipse…), buffing a strategy and steering your build.
+- **Elite affixed enemies**: Swift / Warded / Colossal / Regenerating / Adaptive / Splitter; bosses carry two affixes.
+- **Kill-streak combo**: multiplies gold/XP and grants momentum damage; resets on a castle breach.
+- **Pacts**: cursed reward cards — permanent power for a price (e.g. Ravager's Pact).
+- HUD shows the active omen and the combo counter.
 
 ## v1.3.0 — brighter, Earth-based visual re-theme
 - Fixed the "black hole" problem: replaced the near-black gothic palette (dark stone, heavy vignette, black embers) with a **daylit Earth battlefield** — warm sky gradient, grass lanes, dirt paths, sandstone keep, hills on the horizon, light dust motes.

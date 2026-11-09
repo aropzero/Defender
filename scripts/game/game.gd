@@ -26,6 +26,12 @@ var spawn_queue = []
 var spawn_timer = 0.0
 var win = false
 
+# campaign layer: wave omen, elite affixes, splitter spawn queue
+var _omen_dict = {}
+var _omen_spd = 1.0
+var _pending_spawns = []
+var elites_spawned = 0
+
 # skills
 var _skill_cd = {}
 
@@ -46,6 +52,8 @@ var _wave_txt: Label
 var _kills_txt: Label
 var _lvl_txt: Label
 var _synergy_txt: Label
+var _omen_txt: Label
+var _combo_txt: Label
 var _msg_lbl: Label
 var _msg_timer = 0.0
 
@@ -463,6 +471,7 @@ func _start_run() -> void:
 	_cd.clear()
 	fx.clear()
 	spawn_queue.clear()
+	elites_spawned = 0
 	_phase = "build"
 	_build_ui()
 	Synergy.refresh()
@@ -573,6 +582,14 @@ func _build_ui() -> void:
 	hb.add_child(_kills_txt)
 	_lvl_txt = Label.new()
 	hb.add_child(_lvl_txt)
+	_omen_txt = Label.new()
+	_omen_txt.add_theme_font_size_override("font_size", 14)
+	_omen_txt.add_theme_color_override("font_color", CLR_GOLD)
+	hb.add_child(_omen_txt)
+	_combo_txt = Label.new()
+	_combo_txt.add_theme_font_size_override("font_size", 15)
+	_combo_txt.add_theme_color_override("font_color", Color("#8e3b3b"))
+	hb.add_child(_combo_txt)
 	var startb = Button.new()
 	startb.text = "Start Wave " + str(Run.wave)
 	startb.pressed.connect(_begin_wave)
@@ -664,6 +681,10 @@ func _update_ui() -> void:
 		_wave_txt.text = "Wave %d" % Run.wave
 		_kills_txt.text = "Kills %d" % Run.kills
 		_lvl_txt.text = "Lv %d" % Run.player.level
+		if is_instance_valid(_omen_txt):
+			_omen_txt.text = ("Omen: " + _omen_dict.name) if not _omen_dict.is_empty() else ""
+		if is_instance_valid(_combo_txt):
+			_combo_txt.text = ("COMBO x%d" % Run.combo) if Run.combo > 1 else ""
 	if is_instance_valid(_synergy_txt):
 		_synergy_txt.text = _synergy_summary()
 
@@ -947,7 +968,9 @@ func _begin_wave() -> void:
 	if _phase != "build":
 		return
 	_phase = "combat"
+	_roll_omen()
 	var comp: Dictionary = DB.wave_composition(Run.wave, LANES)
+	_pending_spawns.clear()
 	spawn_queue.clear()
 	for i in comp.count:
 		spawn_queue.append({"hp": comp.hp * (0.85 + randf() * 0.3), "speed": comp.speed * (0.9 + randf() * 0.2),
@@ -957,9 +980,72 @@ func _begin_wave() -> void:
 	var sb: Button = _topbar.find_child("StartWaveBtn", true, false)
 	if sb != null:
 		sb.disabled = true
-	_message("Wave %d incoming!" % Run.wave)
+	if not _omen_dict.is_empty():
+		_message("Omen: %s — %s" % [_omen_dict.name, _omen_dict.desc])
+	else:
+		_message("Wave %d incoming!" % Run.wave)
+
+func _roll_omen() -> void:
+	var pool = DB.OMENS.duplicate()
+	if Run.omen_id != "":
+		pool = pool.filter(func(o): return o.id != Run.omen_id)
+	if pool.is_empty():
+		pool = DB.OMENS.duplicate()
+	_omen_dict = pool[randi() % pool.size()]
+	Run.omen_id = _omen_dict.id
+	Run.omen_give = {}
+	for k in _omen_dict.get("give", {}):
+		Run.omen_give[k] = float(_omen_dict.give[k])
+	_omen_spd = _omen_dict.get("spd", 1.0)
+	Synergy.refresh()
+	_update_ui()
+
+func _random_affix() -> Dictionary:
+	return DB.AFFIXES[randi() % DB.AFFIXES.size()]
 
 func _spawn_enemy(data: Dictionary) -> void:
+	# roll elite affixes unless this is a splitter child
+	if not data.get("mini", false):
+		var affs = []
+		if data.get("boss", false):
+			affs.append(_random_affix())
+			affs.append(_random_affix())
+		else:
+			var chance = min(0.32, 0.08 + Run.wave * 0.022)
+			if randf() < chance:
+				affs.append(_random_affix())
+				if Run.wave >= 8 and randf() < 0.45:
+					affs.append(_random_affix())
+		if affs.size() > 0:
+			var ahp = 1.0
+			var aspd = 1.0
+			var aarm = 0.0
+			var arad = 0.0
+			var adap = false
+			var areg = 0.0
+			var asplit = false
+			var ids = []
+			for a in affs:
+				ids.append(a.id)
+				ahp *= a.get("hp_mult", 1.0)
+				aspd *= a.get("speed_mult", 1.0)
+				aarm += a.get("armor_add", 0.0)
+				arad = max(arad, a.get("radius", 0.0))
+				adap = adap or a.get("adaptive", false)
+				areg += a.get("regen", 0.0)
+				asplit = asplit or a.get("splitter", false)
+			data["hp"] = data["hp"] * ahp
+			data["speed"] = data["speed"] * aspd * _omen_spd
+			data["armor"] = data.get("armor", 0.0) + aarm
+			data["affixes"] = ids
+			data["aff_radius"] = arad
+			data["aff_adaptive"] = adap
+			data["aff_regen"] = areg
+			data["aff_splitter"] = asplit
+		else:
+			data["speed"] = data.get("speed", 50.0) * _omen_spd
+	else:
+		data["speed"] = data.get("speed", 50.0) * _omen_spd
 	var lane = randi() % LANES
 	var e = Enemy.new()
 	e.setup(data, lane)
@@ -968,6 +1054,8 @@ func _spawn_enemy(data: Dictionary) -> void:
 	e.serial = run_enemy_serial
 	run_enemy_serial += 1
 	enemies.append(e)
+	if e.elite:
+		elites_spawned += 1
 
 # --------------------------------------------------------------- combat tick
 
@@ -1019,6 +1107,7 @@ func _freezing_all(dur: float) -> void:
 	fx.append({"kind": "ring", "pos": Vector2(640, 220), "r": 30, "t": 0.3, "dur": 0.3, "color": Color("#59b8ff")})
 
 func _hit_castle(e: Enemy) -> void:
+	Run.combo = 0  # a breach breaks the streak
 	var dmg = 12.0
 	if e.boss:
 		dmg = 55.0
@@ -1035,20 +1124,35 @@ func _collect_deaths() -> void:
 	for e in enemies:
 		if e.dead:
 			killed.append(e)
-			Run.gold += e.value * (1.0 + Synergy.add_val("gold_mult"))
+			Run.combo += 1
+			var cmult = 1.0 + min(Run.combo, 20) * 0.03
+			Run.gold += e.value * (1.0 + Synergy.add_val("gold_mult")) * cmult
 			Run.kills += 1
-			_add_xp(e.xp)
+			_add_xp(e.xp * cmult)
 			_on_kill(e)
 	if killed.size() > 0:
 		for e in killed:
 			enemies.erase(e)
 			e.queue_free()
 		_update_ui()
+	# flush splitter minion spawns (deferred so we never mutate enemies mid-loop)
+	if _pending_spawns.size() > 0:
+		var pend = _pending_spawns.duplicate()
+		_pending_spawns.clear()
+		for d in pend:
+			_spawn_enemy(d)
 	# wave complete check
 	if _phase == "combat" and enemies.is_empty() and spawn_queue.is_empty():
 		_wave_cleared()
 
 func _on_kill(e: Enemy) -> void:
+	if e.splitter and not e.mini:
+		for i in 2:
+			_pending_spawns.append({
+				"hp": e.max_hp * 0.35, "speed": e.speed * 1.15,
+				"armor": max(0.0, e.armor * 0.5), "gold": e.value * 0.3,
+				"xp": e.xp * 0.3, "boss": false, "mini": true, "affixes": []})
+		fx.append({"kind": "ring", "pos": e.position, "r": 30, "t": 0.4, "dur": 0.4, "color": Color("#ff5a6e")})
 	if Synergy.add_val("heal_on_kill") > 0.0:
 		_heal_castle(Synergy.add_val("heal_on_kill"))
 	if Synergy.has_flag("voidecho"):
@@ -1100,6 +1204,12 @@ func _wave_cleared() -> void:
 	_phase = "reward"
 	Run.waves_cleared += 1
 	Run.wave += 1
+	# the omen's favour ends with its wave
+	Run.omen_id = ""
+	Run.omen_give = {}
+	_omen_dict = {}
+	_omen_spd = 1.0
+	Synergy.refresh()
 	Meta.record_wave(Run.waves_cleared)
 	var shard_gain = 5 + Run.waves_cleared * 2
 	Meta.add_shards(shard_gain)
@@ -1245,6 +1355,13 @@ func _generate_reward_cards() -> Array:
 		cards.append({"kind": "relic", "v": Run.towers[randi() % Run.towers.size()].serial, "name": "Mystery Relic", "desc": "Grant a random relic to one of your towers."})
 	# attribute point
 	cards.append({"kind": "attr", "v": 1, "name": "Discipline", "desc": "Gain +1 attribute point."})
+	# a cursed pact card, sometimes
+	if randi() % 2 == 0:
+		var pool_p = DB.PACTS.duplicate()
+		pool_p = pool_p.filter(func(p): return not (p.id in Run.pacts))
+		if pool_p.size() > 0:
+			var pc: Dictionary = pool_p[randi() % pool_p.size()]
+			cards.append({"kind": "pact", "v": pc.id, "name": pc.name + " (Pact)", "desc": pc.desc})
 	cards.shuffle()
 	return cards.slice(0, 3)
 
@@ -1269,6 +1386,23 @@ func _apply_reward(card: Dictionary, panel: Control) -> void:
 				_apply_relic(ser, DB.relics[randi() % DB.relics.size()].id)
 		"attr":
 			_show_levelup()
+		"pact":
+			var pact = {}
+			for p in DB.PACTS:
+				if p.id == card.v:
+					pact = p
+					break
+			if not pact.is_empty() and not (pact.id in Run.pacts):
+				Run.pacts.append(pact.id)
+				for k in pact.get("add", {}):
+					Run.give_bonus[k] = Run.give_bonus.get(k, 0.0) + float(pact.add[k])
+				if pact.has("gold_now"):
+					Run.gold += int(pact.gold_now)
+				if pact.has("curse_hp"):
+					Run.castle.max_hp = max(20.0, Run.castle.max_hp - float(pact.curse_hp))
+					Run.castle.hp = min(Run.castle.hp, Run.castle.max_hp)
+				if pact.has("curse_attr"):
+					Run.player.attr[pact.curse_attr] = max(0, Run.player.attr[pact.curse_attr] - 1)
 	panel.queue_free()
 	_phase = "build"
 	var sb: Button = _topbar.find_child("StartWaveBtn", true, false) if is_instance_valid(_topbar) else null
@@ -1603,6 +1737,8 @@ func _apply_hit(e: Enemy, dmg: float, def: Dictionary, ex: Dictionary, cc: float
 	var actual = e.take_hit(mitigated)
 	# enemy vulnerability global
 	actual *= (1.0 + Synergy.add_val("enemy_vuln"))
+	# kill-streak momentum: each consecutive kill (no breach) feeds damage
+	actual *= (1.0 + min(Run.combo, 25) * 0.005)
 	# statuses from tower def
 	var def_status: Dictionary = def.get("status", {})
 	for id in def_status.keys():
@@ -1759,6 +1895,8 @@ func _clear_ui() -> void:
 	_wave_txt = null
 	_kills_txt = null
 	_lvl_txt = null
+	_omen_txt = null
+	_combo_txt = null
 
 # world draw callback hook
 func _world_draw_callback() -> void:

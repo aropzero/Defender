@@ -334,6 +334,60 @@ var relics := [
 	{ "id": "r_heal", "name": "Blessed Steadying", "desc": "Each shot heals the castle 0.3 HP.", "give": {"castle_heal_per_shot": 0.3} },
 ]
 
+# ---- Wave Omens (battlefield conditions) ------------------------------------
+# Every wave rolls one omen: a global condition that buffs a strategy for that
+# wave. `give` values are injected into the synergy engine for the wave.
+# `spd` optionally scales enemy movement speed.
+const OMENS := [
+	{ "id": "starfall", "name": "Starfall", "desc": "Fire burns hotter: +22% damage, +30% burn potency.",
+	  "give": {"mul_dmg": 0.22, "burn_str": 0.30} },
+	{ "id": "rimeveil", "name": "Rimeveil", "desc": "Chill deepens: +35% slow strength; enemies crawl 15% slower.",
+	  "give": {"slow_str": 0.35}, "spd": 0.85 },
+	{ "id": "stormfront", "name": "Stormfront", "desc": "Thunder sings: +1 chain jump, +5% crit.",
+	  "give": {"chain_bonus": 1, "crit_chance": 0.05} },
+	{ "id": "blackhunt", "name": "Black Hunt", "desc": "The dark hungers: every enemy takes +18% damage.",
+	  "give": {"enemy_vuln": 0.18} },
+	{ "id": "blessed", "name": "Blessed Ground", "desc": "Light abides: +4 HP/s castle regen; kills heal +2.",
+	  "give": {"castle_regen": 4.0, "heal_on_kill": 2.0} },
+	{ "id": "overgrowth", "name": "Verdant Overgrowth", "desc": "Nature flourishes: +25% DoT potency, +30% root chance.",
+	  "give": {"dot_mult": 0.25, "root_str": 0.30} },
+	{ "id": "mana_surge", "name": "Mana Surge", "desc": "Arcane overflows: +20% attack speed, +15% CDR.",
+	  "give": {"atk_rate": 0.20, "cdr": 0.15} },
+	{ "id": "blight_wind", "name": "Blight Wind", "desc": "Venom hangs thick: +45% poison potency.",
+	  "give": {"poison_str": 0.45} },
+	{ "id": "blood_moon", "name": "Blood Moon", "desc": "Life bleeds freely: +6% lifesteal on all damage.",
+	  "give": {"lifesteal": 0.06} },
+	{ "id": "time_drift", "name": "Temporal Drift", "desc": "Time stutters: the field periodically freezes.",
+	  "give": {"freeze_periodic": 10.0} },
+	{ "id": "iron_siege", "name": "Iron Siege", "desc": "The fortress endures: +30% castle armor, +20% armor pierce.",
+	  "give": {"castle_armor": 0.30, "pierce_armor": 0.20} },
+	{ "id": "void_eclipse", "name": "Void Eclipse", "desc": "Reality frays: +40% armor shred.",
+	  "give": {"shred_str": 0.40} },
+]
+
+# ---- Elite affixes (enemy modifiers) ----------------------------------------
+const AFFIXES := [
+	{ "id": "swift", "name": "Swift", "color": Color("#ffe08a"), "speed_mult": 1.5 },
+	{ "id": "warded", "name": "Warded", "color": Color("#8fdcff"), "armor_add": 8.0 },
+	{ "id": "colossal", "name": "Colossal", "color": Color("#c98aff"), "hp_mult": 1.7, "radius": 16.0 },
+	{ "id": "regen", "name": "Regenerating", "color": Color("#7ff58a"), "regen": 0.02 },
+	{ "id": "adaptive", "name": "Adaptive", "color": Color("#ffb84a"), "adaptive": true },
+	{ "id": "splitter", "name": "Splitter", "color": Color("#ff5a6e"), "splitter": true },
+]
+
+# ---- Pacts (cursed rewards) --------------------------------------------------
+# Offered occasionally among wave rewards. `add` values fold into the permanent
+# `give_bonus` stream (refresh applies them). Immediate effects are one-offs
+# (gold_now / curse_hp / curse_attr). Taking a pact is a one-way commitment.
+const PACTS := [
+	{ "id": "ravager", "name": "Ravager's Pact", "desc": "+35% all damage forever — but the castle permanently loses 40 max HP.",
+	  "add": {"mul_dmg": 0.35}, "curse_hp": 40 } ,
+	{ "id": "gilded", "name": "Gilded Curse", "desc": "+120 gold now — but -20% gold income forever.",
+	  "add": {"gold_mult": -0.20}, "gold_now": 120 },
+	{ "id": "alchemist", "name": "Mad Alchemist", "desc": "+25% attack speed forever — but you lose 1 Might.",
+	  "add": {"atk_rate": 0.25}, "curse_attr": "might" },
+]
+
 # ---- Waves ------------------------------------------------------------------
 # Wave scaling helpers, called by game.gd.
 const LANE_Y := 0.0  # filled at runtime

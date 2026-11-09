@@ -13,6 +13,8 @@ func _ready() -> void:
 		_run_selftest()
 	if OS.get_environment("CITADEL_MENUTEST") == "1":
 		_run_menutest()
+	if OS.get_environment("CITADEL_PACTTEST") == "1":
+		_run_pacttest()
 
 func _run_menutest() -> void:
 	await get_tree().process_frame
@@ -51,6 +53,17 @@ func _resolve_phase() -> void:
 		else:
 			return
 
+func _run_pacttest() -> void:
+	await get_tree().process_frame
+	game._start_run()
+	await get_tree().process_frame
+	for p in DB.PACTS:
+		game._apply_reward({"kind": "pact", "v": p.id}, Control.new())
+	print("[PACTTEST OK] pacts=%d maxhp=%.0f might=%d gold=%.0f give_bonus=%s" % [
+		Run.pacts.size(), Run.castle.max_hp, Run.player.attr.might, Run.gold,
+		str(Run.give_bonus)])
+	get_tree().quit()
+
 func _run_selftest() -> void:
 	await get_tree().process_frame
 	game._start_run()
@@ -73,15 +86,21 @@ func _run_selftest() -> void:
 	game._update_ui()
 
 	var waves_ran := 0
+	var omens_seen := {}
+	var max_combo := 0
 	while waves_ran < 5 and Run.castle.hp > 0.0:
 		if game._phase != "combat":
 			game._begin_wave()
+			if Run.omen_id != "":
+				omens_seen[Run.omen_id] = true
 		var start := Time.get_ticks_msec()
 		while Time.get_ticks_msec() - start < 6000 and Run.castle.hp > 0.0:
 			if game._phase != "combat":
 				_resolve_phase()
 			if game._phase == "gameover":
 				break
+			if Run.combo > max_combo:
+				max_combo = Run.combo
 			if game._phase == "combat" and randi() % 40 == 0:
 				var sids: Array = Run.skills_equipped
 				if sids.size() > 0:
@@ -103,8 +122,9 @@ func _run_selftest() -> void:
 			break
 		waves_ran += 1
 
-	print("[SELFTEST OK] waves_ran=%d hp=%.0f kills=%d gold=%.0f syn_active=%d asc=%d" % [
+	print("[SELFTEST OK] waves_ran=%d hp=%.0f kills=%d gold=%.0f syn_active=%d asc=%d omen=%d elite=%d combo_peak=%d pacts=%d" % [
 		waves_ran, Run.castle.hp, Run.kills, Run.gold,
 		Synergy.active_resonances.size() + Synergy.active_adjacencies.size() + Synergy.active_ascensions.size(),
-		Synergy.active_ascensions.size()])
+		Synergy.active_ascensions.size(),
+		omens_seen.size(), game.elites_spawned, max_combo, Run.pacts.size()])
 	get_tree().quit()

@@ -48,6 +48,12 @@ func refresh() -> void:
 	if Run.towers.size() > 0:
 		_adjacencies()
 		_ascensions()
+	# game-managed bonus streams: wave omens + permanent pacts.
+	# These are kept out of the element pool so they never double-count.
+	for key in Run.omen_give:
+		add(key, float(Run.omen_give[key]))
+	for key in Run.give_bonus:
+		add(key, float(Run.give_bonus[key]))
 
 # --- helpers ----------------------------------------------------------------
 
