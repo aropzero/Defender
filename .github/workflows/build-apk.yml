@@ -81,9 +81,21 @@ jobs:
           unzip -q godot.zip
           mv "Godot_v${GODOT_VERSION}-stable_linux.x86_64" godot
           chmod +x godot
-          mkdir -p "${HOME}/.local/share/godot/export_templates/${GODOT_VERSION}.stable"
-          unzip -q godot_templates.tpz -d "${HOME}/.local/share/godot/export_templates/${GODOT_VERSION}.stable"
-          ls "${HOME}/.local/share/godot/export_templates/${GODOT_VERSION}.stable" | head
+          TEMPLATE_DIR="${HOME}/.local/share/godot/export_templates/${GODOT_VERSION}.stable"
+          mkdir -p "${TEMPLATE_DIR}"
+          # Extract to a temp dir, then normalize the package layout: it may be
+          # flat (android_debug.apk at root) or wrapped in a 'templates/' folder.
+          rm -rf /tmp/gdtpl && mkdir -p /tmp/gdtpl
+          unzip -q godot_templates.tpz -d /tmp/gdtpl
+          SRC=/tmp/gdtpl
+          if [ ! -f "${SRC}/android_debug.apk" ] && [ -d "${SRC}/templates" ]; then
+            SRC="${SRC}/templates"
+          fi
+          cp -a "${SRC}"/. "${TEMPLATE_DIR}"/
+          rm -rf /tmp/gdtpl
+          ls "${TEMPLATE_DIR}" | head
+          test -f "${TEMPLATE_DIR}/android_debug.apk" && echo "android template OK"
+          test -f "${TEMPLATE_DIR}/version.txt" && echo "version.txt OK"
 
       - name: Configure Godot editor settings (Android SDK / keystore)
         run: |
