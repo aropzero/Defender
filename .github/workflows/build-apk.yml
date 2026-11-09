@@ -85,6 +85,11 @@ jobs:
           echo "editor settings:"
           cat "${HOME}/.config/godot/editor_settings-4.7.tres"
 
+      - name: Godot import pass (build global class cache)
+        run: |
+          ./godot --headless --path . --import
+          test -f .godot/global_script_class_cache.cfg && echo "class cache built"
+
       - name: Run game self-test (headless)
         run: |
           CITADEL_SELFTEST=1 ./godot --headless --path . 2>&1 | tee selftest.log
