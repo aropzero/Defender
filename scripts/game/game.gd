@@ -57,17 +57,18 @@ var _how_body: Label
 var _how_slide = 0
 
 # --------------------------------------------------------------------------
-# AAA gothic theme — dark stone, blood-iron borders, sickly gold, embers.
+# AAA theme — an Earth battlefield at golden hour: bright sky, grass, dirt,
+# sandstone keep. UI is warm parchment for readability on any screen.
 # --------------------------------------------------------------------------
-const CLR_BG = Color("#06060b")
-const CLR_PANEL = Color(0.045, 0.05, 0.08, 0.94)
-const CLR_PANEL_HI = Color(0.08, 0.09, 0.13, 0.96)
-const CLR_PANEL_DN = Color(0.03, 0.033, 0.055, 0.95)
-const CLR_BORDER = Color("#6d0f1d")
-const CLR_BORDER_HI = Color("#b01e2e")
-const CLR_GOLD = Color("#d9a441")
-const CLR_TXT = Color("#d6ccbd")
-const CLR_TXT_DIM = Color(0.55, 0.53, 0.48, 0.8)
+const CLR_BG = Color("#bfd6e8")
+const CLR_PANEL = Color(0.97, 0.94, 0.87, 0.96)
+const CLR_PANEL_HI = Color(1.0, 0.97, 0.91, 0.98)
+const CLR_PANEL_DN = Color(0.90, 0.85, 0.76, 0.97)
+const CLR_BORDER = Color("#7a3b2e")
+const CLR_BORDER_HI = Color("#9c4f3a")
+const CLR_GOLD = Color("#b8862e")
+const CLR_TXT = Color("#2a211a")
+const CLR_TXT_DIM = Color(0.35, 0.30, 0.26, 0.85)
 
 var _vs = Vector2(1280, 720)
 var _scale = 1.0
@@ -92,11 +93,11 @@ func _skin(n: Node) -> void:
 		b.add_theme_stylebox_override("normal", _sb(CLR_PANEL, CLR_BORDER, 1, 4))
 		b.add_theme_stylebox_override("hover", _sb(CLR_PANEL_HI, CLR_BORDER_HI, 2, 4))
 		b.add_theme_stylebox_override("pressed", _sb(CLR_PANEL_DN, CLR_GOLD, 2, 4))
-		b.add_theme_stylebox_override("disabled", _sb(Color(0.05, 0.055, 0.08, 0.6), Color(0.25, 0.22, 0.18, 0.6), 1, 4))
+		b.add_theme_stylebox_override("disabled", _sb(Color(0.78, 0.75, 0.70, 0.8), Color(0.55, 0.52, 0.48, 0.7), 1, 4))
 		b.add_theme_color_override("font_color", CLR_TXT)
-		b.add_theme_color_override("font_hover_color", Color("#f0e6d0"))
-		b.add_theme_color_override("font_pressed_color", CLR_GOLD)
-		b.add_theme_color_override("font_disabled_color", Color(0.45, 0.42, 0.38, 0.6))
+		b.add_theme_color_override("font_hover_color", Color("#0f0a07"))
+		b.add_theme_color_override("font_pressed_color", Color("#5a3a12"))
+		b.add_theme_color_override("font_disabled_color", Color(0.42, 0.39, 0.34, 0.7))
 	elif n is PanelContainer:
 		n.add_theme_stylebox_override("panel", _sb(CLR_PANEL, CLR_BORDER, 2, 10))
 	elif n is Label:
@@ -108,7 +109,7 @@ func _skin(n: Node) -> void:
 func _title(l: Label, size: int) -> void:
 	l.add_theme_font_size_override("font_size", size)
 	l.add_theme_color_override("font_color", CLR_GOLD)
-	l.add_theme_color_override("font_shadow_color", Color(0.9, 0.15, 0.1, 0.6))
+	l.add_theme_color_override("font_shadow_color", Color(0.25, 0.16, 0.06, 0.55))
 	l.add_theme_constant_override("shadow_offset_x", 2)
 	l.add_theme_constant_override("shadow_offset_y", 2)
 
@@ -122,40 +123,43 @@ func _build_atmosphere() -> void:
 	_bg.name = "_bg"
 	_bg.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_ui.add_child(_bg)
-	var base := ColorRect.new()
-	base.color = CLR_BG
-	base.set_anchors_preset(Control.PRESET_FULL_RECT)
-	_bg.add_child(base)
-	var vig := TextureRect.new()
-	var vigtex := GradientTexture2D.new()
-	vigtex.gradient = Gradient.new()
-	vigtex.gradient.set_color(0, Color(0, 0, 0, 0))
-	vigtex.gradient.set_color(1, Color(0, 0, 0, 0.93))
-	vigtex.fill_from = Vector2(0.5, 0.5)
-	vigtex.fill_to = Vector2(1.06, 1.06)
-	vigtex.fill = GradientTexture2D.FILL_RADIAL
-	vig.texture = vigtex
-	vig.set_anchors_preset(Control.PRESET_FULL_RECT)
-	_bg.add_child(vig)
-	var emb := CPUParticles2D.new()
-	emb.amount = 80
-	emb.lifetime = 6.0
-	emb.emission_shape = CPUParticles2D.EMISSION_SHAPE_RECTANGLE
-	emb.emission_rect_extents = Vector2(760, 420)
-	emb.position = Vector2(640, 320)
-	emb.direction = Vector2(0, -1)
-	emb.spread = 30
-	emb.gravity = Vector2(0, -10)
-	emb.initial_velocity_min = 6
-	emb.initial_velocity_max = 40
-	emb.scale_amount_min = 0.8
-	emb.scale_amount_max = 2.6
-	emb.color = Color(1.0, 0.55, 0.25, 0.5)
-	var ramp := Gradient.new()
-	ramp.set_color(0, Color(1.0, 0.7, 0.35, 0.85))
-	ramp.set_color(1, Color(0.5, 0.05, 0.02, 0.0))
-	emb.color_ramp = ramp
-	_bg.add_child(emb)
+	# Sky: warm daylit gradient (upper sky -> warm horizon).
+	var sky := TextureRect.new()
+	var skytex := GradientTexture2D.new()
+	skytex.gradient = Gradient.new()
+	skytex.gradient.set_color(0, Color("#7fa6c9"))
+	skytex.gradient.set_color(1, Color("#e6c98f"))
+	skytex.fill_from = Vector2(0.5, 0.0)
+	skytex.fill_to = Vector2(0.5, 1.0)
+	skytex.fill = GradientTexture2D.FILL_LINEAR
+	sky.texture = skytex
+	sky.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_bg.add_child(sky)
+	# Warm ground haze along the bottom (reads as earth, not void).
+	var ground := ColorRect.new()
+	ground.color = Color(0.55, 0.42, 0.26, 0.28)
+	ground.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_bg.add_child(ground)
+	# Light dust motes drifting in the sun (replaces the black embers).
+	var motes := CPUParticles2D.new()
+	motes.amount = 70
+	motes.lifetime = 8.0
+	motes.emission_shape = CPUParticles2D.EMISSION_SHAPE_RECTANGLE
+	motes.emission_rect_extents = Vector2(760, 420)
+	motes.position = Vector2(640, 320)
+	motes.direction = Vector2(0, -1)
+	motes.spread = 40
+	motes.gravity = Vector2(0, -6)
+	motes.initial_velocity_min = 4
+	motes.initial_velocity_max = 24
+	motes.scale_amount_min = 0.6
+	motes.scale_amount_max = 2.0
+	motes.color = Color(1.0, 0.88, 0.6, 0.22)
+	var mramp := Gradient.new()
+	mramp.set_color(0, Color(1.0, 0.9, 0.65, 0.35))
+	mramp.set_color(1, Color(0.9, 0.75, 0.5, 0.0))
+	motes.color_ramp = mramp
+	_bg.add_child(motes)
 
 func _relayout() -> void:
 	var vs := get_viewport().get_visible_rect().size
@@ -480,50 +484,53 @@ func _draw_world() -> void:
 
 func _world_draw() -> void:
 	var w = _world
-	# field base
-	w.draw_rect(Rect2(20, 40, 1240, 560), Color(0.055, 0.07, 0.10), true)
-	# alternate lane ribbons for depth
+	# field base — grass
+	w.draw_rect(Rect2(20, 40, 1240, 560), Color("#6f9456"), true)
+	# alternate lane ribbons — mown grass bands
 	for i in LANES:
 		if i % 2 == 0:
 			continue
 		var y0 = (lane_ys[i - 1] + lane_ys[i]) * 0.5 if i > 0 else 40.0
 		var y1 = (lane_ys[i] + lane_ys[i + 1]) * 0.5 if i < LANES - 1 else 600.0
-		w.draw_rect(Rect2(20, y0, 1240, y1 - y0), Color(0.04, 0.05, 0.075), true)
-	# lane guide lines
+		w.draw_rect(Rect2(20, y0, 1240, y1 - y0), Color("#5f8550"), true)
+	# lane guide lines — dirt path
 	for i in LANES:
 		var y = lane_ys[i]
-		w.draw_line(Vector2(20, y), Vector2(CASTLE_X + 50, y), Color(0.12, 0.14, 0.19), 2)
-	# build sockets (empties)
+		w.draw_line(Vector2(20, y), Vector2(CASTLE_X + 50, y), Color("#b39060"), 3)
+	# build sockets (empties) — sun-bleached stone pads
 	for key in slot_pos:
 		var p: Vector2 = slot_pos[key]
 		if Run.tower_at(int(key.split(",")[0]), int(key.split(",")[1])).is_empty():
-			w.draw_circle(p, 18, Color(0.10, 0.12, 0.17))
-			w.draw_arc(p, 18, 0, TAU, 26, Color(0.32, 0.36, 0.45), 2.5)
-			w.draw_line(p + Vector2(-8, 0), p + Vector2(8, 0), Color(0.4, 0.45, 0.55), 2)
-			w.draw_line(p + Vector2(0, -8), p + Vector2(0, 8), Color(0.4, 0.45, 0.55), 2)
-	# castle keep
+			w.draw_circle(p, 18, Color("#d8cba4"))
+			w.draw_arc(p, 18, 0, TAU, 26, Color("#6b5a3a"), 3)
+			w.draw_line(p + Vector2(-8, 0), p + Vector2(8, 0), Color("#6b5a3a"), 3)
+			w.draw_line(p + Vector2(0, -8), p + Vector2(0, 8), Color("#6b5a3a"), 3)
+	# castle keep — sandstone with red banners
 	var cx = CASTLE_X - 10
-	w.draw_rect(Rect2(cx, 40, 72, 560), Color(0.22, 0.24, 0.32), true)
+	w.draw_rect(Rect2(cx, 40, 72, 560), Color("#c9b089"), true)
+	w.draw_rect(Rect2(cx + 4, 48, 64, 12), Color("#a98f6a"), true)
 	for i in range(6):
 		var bxp = cx + 2 + i * 12
-		w.draw_rect(Rect2(bxp, 40, 8, 16), Color(0.28, 0.30, 0.40), true)
+		w.draw_rect(Rect2(bxp, 40, 8, 20), Color("#b39a72"), true)
+		w.draw_rect(Rect2(bxp + 1, 40, 6, 6), Color("#8e3b3b"), true)
 	# gate
-	w.draw_rect(Rect2(cx + 18, 330, 36, 270), Color(0.03, 0.03, 0.05), true)
-	w.draw_arc(Vector2(cx + 36, 330), 18, PI, TAU, 24, Color(0.03, 0.03, 0.05), 20)
-	# gate blood-glow
+	w.draw_rect(Rect2(cx + 18, 330, 36, 270), Color("#4a3626"), true)
+	w.draw_arc(Vector2(cx + 36, 330), 18, PI, TAU, 24, Color("#4a3626"), 20)
+	# warm torch glow bleeding from the gate
 	for i in range(12):
-		var a = 0.013 * (i + 1)
-		w.draw_arc(Vector2(cx + 60, 360), 26 + i * 13, PI * 0.5, PI * 1.5, 28, Color(0.9, 0.25, 0.18, a), 8.0)
+		var a = 0.02 * (i + 1)
+		w.draw_arc(Vector2(cx + 60, 360), 26 + i * 13, PI * 0.5, PI * 1.5, 28, Color(1.0, 0.62, 0.25, a), 8.0)
 	# beacon
-	w.draw_circle(Vector2(cx + 82, 120), 6, Color(0.95, 0.75, 0.25))
-	# ragged ruin silhouettes along the rear horizon
-	var shapes = [26, 40, 18, 34, 24]
+	w.draw_circle(Vector2(cx + 82, 120), 6, Color("#ffd24a"))
+	w.draw_arc(Vector2(cx + 82, 120), 10, 0, TAU, 20, Color(1.0, 0.8, 0.3, 0.4), 2)
+	# distant hills along the horizon (soft blue-green, Earth not void)
+	var shapes = [24, 40, 16, 34, 22]
 	for i in shapes.size():
 		var rx = 60 + i * 240
 		var rh = shapes[i]
 		var pts = PackedVector2Array([
 			Vector2(rx, 40), Vector2(rx + 14, 40), Vector2(rx + 8, 40 - rh)])
-		w.draw_colored_polygon(pts, Color(0.045, 0.05, 0.085))
+		w.draw_colored_polygon(pts, Color("#8ba06b"))
 	# fx
 	for f in fx:
 		match f.kind:
@@ -601,22 +608,22 @@ func _build_ui() -> void:
 	_msg_lbl.position = Vector2(20, 620)
 	_msg_lbl.size = Vector2(800, 20)
 	_msg_lbl.add_theme_font_size_override("font_size", 15)
-	_msg_lbl.modulate = Color(1, 0.85, 0.5)
+	_msg_lbl.add_theme_color_override("font_color", Color("#3a2a14"))
+	_msg_lbl.add_theme_color_override("font_shadow_color", Color(1, 1, 1, 0.6))
+	_msg_lbl.add_theme_constant_override("shadow_offset_x", 1)
+	_msg_lbl.add_theme_constant_override("shadow_offset_y", 1)
 	_ui.add_child(_msg_lbl)
-	# guide hint (tap to dismiss)
+	# guide hint (tap to dismiss) — light parchment pill, dark text
 	_hint_lbl = Button.new()
 	_hint_lbl.name = "Hint"
 	_hint_lbl.add_theme_font_size_override("font_size", 16)
-	_hint_lbl.add_theme_color_override("font_color", Color("#f0cd8a"))
-	_hint_lbl.add_theme_color_override("font_hover_color", Color("#ffe6ad"))
-	_hint_lbl.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.9))
-	_hint_lbl.add_theme_constant_override("shadow_offset_x", 1)
-	_hint_lbl.add_theme_constant_override("shadow_offset_y", 1)
-	var flat := _sb(Color(0, 0, 0, 0.0), Color(1, 1, 1, 0.0), 0)
-	_hint_lbl.add_theme_stylebox_override("normal", flat)
-	_hint_lbl.add_theme_stylebox_override("hover", flat)
-	_hint_lbl.add_theme_stylebox_override("pressed", flat)
-	_hint_lbl.add_theme_stylebox_override("focus", flat)
+	_hint_lbl.add_theme_color_override("font_color", Color("#2f2114"))
+	_hint_lbl.add_theme_color_override("font_hover_color", Color("#160e08"))
+	var hint_sb := _sb(Color(0.97, 0.94, 0.87, 0.92), Color("#8e3b3b"), 2, 20)
+	_hint_lbl.add_theme_stylebox_override("normal", hint_sb)
+	_hint_lbl.add_theme_stylebox_override("hover", hint_sb)
+	_hint_lbl.add_theme_stylebox_override("pressed", hint_sb)
+	_hint_lbl.add_theme_stylebox_override("focus", hint_sb)
 	_hint_lbl.pressed.connect(func(): _hint_dismissed = true; _update_hint())
 	_ui.add_child(_hint_lbl)
 	_skin(_topbar)

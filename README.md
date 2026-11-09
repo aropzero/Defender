@@ -123,9 +123,14 @@ synergy engine and combat loop pick it up automatically — no wiring required.
 
 ## Presentation
 
-- **Full-screen responsive layout** — the battle field keeps its design aspect and is centered, while the rest of the screen is filled with atmospheric gothic art, so it fills any phone orientation with no black bars.
-- **AAA gothic theme** — blood-iron panels, sickly gold titles, ember drift and a corner vignette.
+- **Full-screen responsive layout** — the battle field keeps its design aspect and is centered, while the rest of the screen is filled with atmospheric art, so it fills any phone orientation with no black bars.
+- **Earth battlefield at golden hour** — a bright, daylit scene: warm sky, grass field, dirt lanes, a sandstone keep with red banners and a torch-lit gate. No black voids — readable on any phone screen.
+- **Parchment UI** — light, high-contrast panels and buttons with dark ink text, so every menu and stat is legible in bright and dim light.
 - **Touch input** — tap to build towers, open panels and cast skills (works alongside mouse/keys).
+
+## v1.3.0 — brighter, Earth-based visual re-theme
+- Fixed the "black hole" problem: replaced the near-black gothic palette (dark stone, heavy vignette, black embers) with a **daylit Earth battlefield** — warm sky gradient, grass lanes, dirt paths, sandstone keep, hills on the horizon, light dust motes.
+- UI switched from dark-on-dark to **parchment panels + dark text**, so menus, stats, hints and buttons are readable on a phone like the Samsung A05s.
 
 ## v1.2.0 — UI overhaul & onboarding
 - **New cinematic title screen** (full-screen, portrait/landscape aware).
