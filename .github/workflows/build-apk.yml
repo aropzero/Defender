@@ -67,17 +67,30 @@ jobs:
         run: |
           set -euo pipefail
           URL="https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable"
-          # Only download when the cache miss; use curl with retries for resilience.
+          # Godot's release CDN is intermittently flaky (rare 504s), so the
+          # downloads are resumable and retried hard. The cache below makes a
+          # successful run skip them entirely.
+          fetch() {
+            local url="$1" out="$2"
+            for attempt in $(seq 1 15); do
+              if curl -fL -C - --retry 4 --retry-all-errors --retry-delay 5 \
+                   --connect-timeout 30 -o "$out" "$url"; then
+                return 0
+              fi
+              echo "download attempt ${attempt} failed for $url, retrying..."
+              sleep 8
+            done
+            return 1
+          }
           if [ ! -f godot.zip ]; then
-            curl -fL --retry 5 --retry-all-errors --retry-delay 3 \
-              --connect-timeout 30 -o godot.zip \
-              "${URL}/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
+            fetch "${URL}/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip" godot.zip
           fi
           if [ ! -f godot_templates.tpz ]; then
-            curl -fL --retry 5 --retry-all-errors --retry-delay 3 \
-              --connect-timeout 30 -o godot_templates.tpz \
-              "${URL}/Godot_v${GODOT_VERSION}-stable_export_templates.tpz"
+            fetch "${URL}/Godot_v${GODOT_VERSION}-stable_export_templates.tpz" godot_templates.tpz
           fi
+          unzip -t -q godot.zip
+          unzip -t -q godot_templates.tpz
+          echo "downloads verified"
           unzip -q godot.zip
           mv "Godot_v${GODOT_VERSION}-stable_linux.x86_64" godot
           chmod +x godot
