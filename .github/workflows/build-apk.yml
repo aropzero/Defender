@@ -121,9 +121,6 @@ jobs:
           export/android/java_sdk_path = "${JAVA_HOME}"
           export/android/debug_keystore = "${GITHUB_WORKSPACE}/debug.keystore"
           export/android/debug_keystore_pass = "android"
-          export/android/keystore_release = "${GITHUB_WORKSPACE}/debug.keystore"
-          export/android/keystore_release_user = "androiddebugkey"
-          export/android/keystore_release_pass = "android"
           EOF
           echo "editor settings:"
           cat "${HOME}/.config/godot/editor_settings-4.7.tres"
@@ -144,12 +141,18 @@ jobs:
           ./godot --headless --path . --export-debug "Android" "build/${APK_NAME}.apk"
 
       - name: Export Android APK (release)
+        # Release signing has no editor setting; Godot reads these env vars.
+        env:
+          GODOT_ANDROID_KEYSTORE_RELEASE_PATH: ${{ github.workspace }}/debug.keystore
+          GODOT_ANDROID_KEYSTORE_RELEASE_USER: androiddebugkey
+          GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD: android
         run: |
           ./godot --headless --path . --export-release "Android" "build/${APK_NAME}-release.apk"
 
-      - name: Verify APK signature
+      - name: Verify APK signatures
         run: |
           "${ANDROID_SDK_ROOT}/build-tools/35.0.0/apksigner" verify --print-certs "build/${APK_NAME}.apk" | head -3
+          "${ANDROID_SDK_ROOT}/build-tools/35.0.0/apksigner" verify --print-certs "build/${APK_NAME}-release.apk" | head -3
 
       - name: Upload debug APK
         uses: actions/upload-artifact@v4
